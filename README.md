@@ -492,7 +492,7 @@ semantic-search/
 Clone the repository:
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/AlaaMousa05/human-rights-conversational-rag
 cd semantic-search
 ```
 
