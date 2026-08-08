@@ -1,70 +1,729 @@
-# Human Rights Documents – RAG Assistant
+# Human Rights RAG Assistant
 
-A Retrieval-Augmented Generation (RAG) application built with LangChain. It
-retrieves the most relevant passages from 163 UN human rights instruments and
-uses a Large Language Model to generate a final answer grounded in those
-passages — not in the model's own prior knowledge.
+A conversational Retrieval-Augmented Generation (RAG) chatbot that answers questions using United Nations human rights documents.
 
-Built on top of the Week 1 semantic search engine, extended with an LLM
-generation layer.
+The application was originally built as a semantic search system and was enhanced to support:
 
-## Overview
+* Conversational memory
+* Multi-turn conversations
+* Follow-up questions
+* MMR retrieval
+* Hybrid keyword + semantic retrieval
+* Retrieval evaluation and comparison
+* Source attribution
+* LLM-generated answers using retrieved document context
 
-The dataset is a CSV of 164 URLs pointing to international human rights documents
-(UN conventions, declarations, and protocols) hosted by the University of
-Minnesota Human Rights Library. The system scrapes the text of each document,
-splits it into chunks, embeds them into a vector space, retrieves the closest
-chunks to a user question, and passes them to an LLM to produce a grounded answer.
+---
 
-## RAG Pipeline
+## Project Overview
 
-1. **Receive** – The user asks a question.
-2. **Retrieve** – The question is embedded and the closest chunks are fetched from the FAISS index.
-3. **Augment** – Retrieved chunks are combined with the question into a prompt.
-4. **Generate** – The prompt is sent to an LLM, which produces an answer using only the retrieved context.
-5. **Cite** – The source passages are displayed alongside the answer for traceability.
+This project is a Retrieval-Augmented Generation application built around a collection of United Nations human rights documents.
 
-## Tech Stack & Design Choices
+The system retrieves relevant document passages and provides them to a Large Language Model (LLM), which generates an answer based only on the retrieved context.
 
-- **LangChain** – Orchestrates the retriever, prompt, and LLM.
-- **Embedding model: `BAAI/bge-small-en-v1.5`** – Open-source, runs locally, no API key, strong retrieval performance.
-- **Vector store: FAISS** – Fast, local, and persisted to disk so the index is built once and reused.
-- **LLM: `llama-3.3-70b-versatile` via Groq** – A free, fast LLM API. Groq was chosen for its speed and free tier. `temperature=0` keeps answers factual and deterministic.
-- **Grounded prompting** – The prompt instructs the model to answer using only the retrieved context and to say when the answer is not present, which prevents hallucination.
-- **UI: Streamlit** – A minimal single-page interface for the live demo.
-- **Secrets management** – The Groq API key is loaded from a local `.env` file and never committed to the repository.
+The enhanced version makes the application conversational, allowing users to ask follow-up questions without repeating information from previous messages.
 
-## Setup & Usage
+It also provides multiple retrieval strategies and an evaluation script to compare their retrieval and answer quality.
+
+---
+
+## Main Features
+
+### 1. Conversational Memory
+
+The chatbot supports multi-turn conversations.
+
+For example:
+
+```text
+User:
+What protections exist for women prisoners?
+
+Assistant:
+Women prisoners have several protections including protection from abuse,
+medical support, legal aid, and protection from retaliation.
+
+User:
+What about pregnant women?
+
+Assistant:
+Pregnant women prisoners have additional protections related to healthcare,
+nutrition, health monitoring, and exercise.
+
+User:
+Are there any specific protections for them?
+
+Assistant:
+Yes. Their health and diet should be monitored by a qualified health
+practitioner, and they should receive adequate food, a healthy environment,
+and regular exercise opportunities.
+```
+
+The chatbot uses previous conversation messages to understand follow-up questions.
+
+---
+
+## 2. Retrieval Methods
+
+The application supports three retrieval approaches.
+
+### Similarity Search
+
+The baseline retrieval method uses vector similarity between the user query and document chunks.
+
+The query is converted into an embedding using:
+
+```text
+BAAI/bge-small-en-v1.5
+```
+
+FAISS is then used to retrieve the most similar chunks.
+
+Similarity Search provides a strong semantic baseline, but it can retrieve multiple chunks containing very similar information.
+
+---
+
+### MMR - Maximum Marginal Relevance
+
+MMR is used to improve retrieval diversity.
+
+Instead of selecting documents only according to similarity to the query, MMR balances:
+
+* Relevance to the query
+* Diversity among retrieved documents
+
+This reduces redundant chunks and can provide broader context to the LLM.
+
+MMR is useful when multiple chunks contain overlapping information.
+
+---
+
+### Hybrid Search
+
+Hybrid Search combines:
+
+* Semantic/vector search
+* Keyword-based search using TF-IDF
+
+Semantic search is useful for understanding the meaning of a query, while keyword search is useful when the query contains specific legal terminology.
+
+For example:
+
+```text
+legal assistance
+sexual abuse
+pregnant women
+Rule 25
+gender-based violence
+```
+
+Hybrid Search can therefore improve retrieval when exact or important keywords appear in the query.
+
+---
+
+## Retrieval Comparison
+
+The evaluation compares:
+
+| Method            | Type                 | Main Strength                           |
+| ----------------- | -------------------- | --------------------------------------- |
+| Similarity Search | Semantic             | Strong semantic matching                |
+| MMR               | Semantic + diversity | Reduces redundant results               |
+| Hybrid Search     | Semantic + keyword   | Better handling of specific terminology |
+
+The baseline Similarity Search is used as a reference point, while MMR and Hybrid Search represent retrieval enhancements.
+
+---
+
+## Evaluation
+
+The project includes:
+
+```text
+evaluate.py
+```
+
+This script evaluates the retrieval methods using a set of representative human-rights questions.
+
+The evaluation tests:
+
+* Retrieval time
+* Retrieved documents
+* Retrieved document sources
+* Retrieved scores
+* Generated answers
+* Relevance of retrieved context
+* Diversity of retrieved results
+* Overall answer quality
+
+### Example evaluation questions
+
+The evaluation includes questions such as:
+
+```text
+What protections are available for women prisoners who experience sexual abuse?
+
+What healthcare and support should pregnant women prisoners receive?
+
+What protections exist for women prisoners against gender-based violence and sexual harassment?
+
+What provisions exist for mothers with children in prison?
+
+What rights do women prisoners have regarding legal assistance?
+```
+
+---
+
+## Evaluation Results
+
+The evaluation demonstrated that all three retrieval methods were able to retrieve relevant United Nations human rights documents.
+
+### Similarity Search
+
+Similarity Search consistently retrieved the relevant United Nations Rules for the Treatment of Women Prisoners and Non-Custodial Measures for Women Offenders.
+
+However, because it focuses primarily on semantic similarity, several retrieved chunks can contain overlapping information.
+
+---
+
+### MMR
+
+MMR generally retrieved relevant documents while improving result diversity.
+
+In some tests, MMR retrieved additional documents that were different from the top semantic matches.
+
+This demonstrates the advantage of balancing relevance with diversity.
+
+---
+
+### Hybrid Search
+
+Hybrid Search performed particularly well for questions containing specific legal terminology.
+
+For example, for:
+
+```text
+What rights do women prisoners have regarding legal assistance?
+```
+
+Hybrid Search retrieved highly relevant results with strong retrieval scores.
+
+It was also effective for queries containing terms such as:
+
+```text
+sexual abuse
+legal assistance
+gender-based violence
+pregnant women
+```
+
+The evaluation therefore shows that Hybrid Search is especially useful when both semantic meaning and exact terminology are important.
+
+---
+
+## Example Evaluation Output
+
+An example of the evaluation output is:
+
+```text
+Similarity Search
+Retrieval time: ~0.03-0.05 seconds
+
+MMR
+Retrieval time: ~0.03-0.07 seconds
+
+Hybrid Search
+Retrieval time: ~0.02-0.05 seconds
+```
+
+The exact retrieval time may vary depending on the machine and environment.
+
+The evaluation also showed that Hybrid Search produced highly relevant results for several terminology-heavy legal questions.
+
+---
+
+## Architecture
+
+The application follows a typical RAG architecture:
+
+```text
+                 ┌──────────────────┐
+                 │      User        │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │    Streamlit     │
+                 │       UI         │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │ Conversation     │
+                 │     Memory       │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │ Retrieval Layer  │
+                 ├──────────────────┤
+                 │ Similarity       │
+                 │ MMR              │
+                 │ Hybrid Search    │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │   FAISS Index    │
+                 │ + TF-IDF Index   │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │ Retrieved        │
+                 │ Document Chunks  │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │   Groq LLM       │
+                 │ Llama 3.3 70B    │
+                 └────────┬─────────┘
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │ Final Answer +   │
+                 │     Sources      │
+                 └──────────────────┘
+```
+
+---
+
+## Data Pipeline
+
+The document ingestion pipeline is implemented in:
+
+```text
+ingest.py
+```
+
+The pipeline performs the following steps:
+
+```text
+CSV document URLs
+       ↓
+Fetch web pages
+       ↓
+Clean HTML
+       ↓
+Create LangChain Documents
+       ↓
+Split documents into chunks
+       ↓
+Generate embeddings
+       ↓
+Build FAISS vector index
+       ↓
+Save index locally
+```
+
+---
+
+## Document Processing
+
+Documents are loaded from:
+
+```text
+data/human_rights_links-2.csv
+```
+
+Each document contains metadata including:
+
+```text
+title
+url
+```
+
+The HTML pages are cleaned using BeautifulSoup.
+
+Scripts and styles are removed before the content is split into chunks.
+
+---
+
+## Chunking
+
+The project uses:
+
+```text
+RecursiveCharacterTextSplitter
+```
+
+with:
+
+```text
+chunk_size = 800
+chunk_overlap = 120
+```
+
+This allows long documents to be divided into smaller passages suitable for retrieval.
+
+---
+
+## Embeddings
+
+The application uses:
+
+```text
+BAAI/bge-small-en-v1.5
+```
+
+through Hugging Face embeddings.
+
+Embeddings are normalized before being stored in FAISS.
+
+---
+
+## Vector Database
+
+The project uses:
+
+```text
+FAISS
+```
+
+for efficient vector similarity search.
+
+The generated index is stored in:
+
+```text
+faiss_index/
+```
+
+---
+
+## Language Model
+
+The application uses Groq as the LLM provider with:
+
+```text
+Llama 3.3 70B Versatile
+```
+
+The model is instructed to answer using the retrieved document context and avoid inventing information that is not present in the provided documents.
+
+---
+
+## Technologies and Tools
+
+### Programming Language
+
+* Python
+
+### Frontend / User Interface
+
+* Streamlit
+
+### RAG / LLM Framework
+
+* LangChain
+
+### Embeddings
+
+* Hugging Face
+* Sentence Transformers
+* BAAI/bge-small-en-v1.5
+
+### Vector Search
+
+* FAISS
+
+### Keyword Search
+
+* Scikit-learn TF-IDF
+
+### LLM
+
+* Groq
+* Llama 3.3 70B Versatile
+
+### Web Scraping
+
+* Requests
+* BeautifulSoup
+
+### Data Processing
+
+* Pandas
+
+### Environment Management
+
+* Python virtual environment
+* python-dotenv
+
+---
+
+## Project Structure
+
+```text
+semantic-search/
+│
+├── data/
+│   └── human_rights_links-2.csv
+│
+├── faiss_index/
+│   ├── index.faiss
+│   └── index.pkl
+│
+├── app.py
+├── ingest.py
+├── evaluate.py
+├── rag_app.py
+│
+├── requirements.txt
+├── .env
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Installation
+
+Clone the repository:
 
 ```bash
-# 1. Create and activate a virtual environment
+git clone <YOUR_GITHUB_REPOSITORY_URL>
+cd semantic-search
+```
+
+Create a virtual environment:
+
+### Windows PowerShell
+
+```powershell
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+```
 
-# 2. Install dependencies
+Activate it:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Install dependencies:
+
+```powershell
 pip install -r requirements.txt
+```
 
-# 3. Add your Groq API key to a .env file
-echo GROQ_API_KEY=your_key_here > .env
+---
 
-# 4. Build the index (run once)
-python ingest.py
+## Environment Variables
 
-# 5. Launch the RAG assistant
+Create a `.env` file:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+```
+
+Do not commit the `.env` file to GitHub.
+
+---
+
+## Running the Application
+
+Start the Streamlit application:
+
+```powershell
 streamlit run rag_app.py
 ```
 
-Get a free Groq API key at https://console.groq.com
+The application will open in the browser.
 
-The app opens at `http://localhost:8501`.
+The user can then:
 
-## Example Questions
+1. Enter a question.
+2. Select the retrieval method.
+3. Select the number of chunks.
+4. Ask follow-up questions.
+5. Review the generated answer.
+6. Inspect the retrieved sources.
 
-- `What protections exist for women prisoners?`
-- `What is the definition of genocide?`
-- `What rights do refugees have?`
-- `What are the rights of children in armed conflict?`
+---
 
-Because answers are grounded in retrieved context, asking something outside the
-documents (e.g. `What is the capital of France?`) makes the assistant respond
-that the answer is not found in the provided documents, rather than inventing one.
+## Building the Index
+
+If the FAISS index needs to be rebuilt:
+
+```powershell
+python ingest.py
+```
+
+The ingestion process will:
+
+1. Read the document URLs.
+2. Download the documents.
+3. Clean the content.
+4. Split the documents into chunks.
+5. Generate embeddings.
+6. Build the FAISS index.
+7. Save the index locally.
+
+---
+
+## Running the Evaluation
+
+Run:
+
+```powershell
+python evaluate.py
+```
+
+The evaluation script compares:
+
+```text
+Similarity Search
+MMR
+Hybrid Search
+```
+
+against the same evaluation questions.
+
+It reports retrieval time, retrieved sources, retrieval scores, and generated answers.
+
+---
+
+## Conversational Example
+
+The application supports follow-up questions.
+
+Example:
+
+```text
+User:
+What protections exist for women prisoners?
+
+Assistant:
+Women prisoners have protections against abuse, access to healthcare,
+legal assistance, and protection from retaliation.
+
+User:
+What about pregnant women?
+
+Assistant:
+Pregnant women prisoners have additional protections related to healthcare,
+diet, nutrition, exercise, and medical monitoring.
+
+User:
+Are there any specific protections for them?
+
+Assistant:
+Yes. Pregnant women should receive health and dietary advice monitored by
+a qualified health practitioner, adequate food, a healthy environment,
+and opportunities for regular exercise.
+```
+
+The second and third questions depend on the previous conversation context.
+
+---
+
+## RAG Prompting
+
+The LLM receives:
+
+```text
+Conversation History
+        +
+Retrieved Context
+        +
+Current Question
+```
+
+The model is instructed to answer using the provided document context.
+
+If the information cannot be found in the retrieved context, the assistant should indicate that it cannot find the answer in the provided documents instead of fabricating information.
+
+---
+
+## Why These Retrieval Enhancements?
+
+### Why MMR?
+
+MMR was selected because basic similarity search can return multiple highly similar chunks.
+
+MMR improves diversity while maintaining relevance, which can provide the LLM with broader context.
+
+### Why Hybrid Search?
+
+Hybrid Search was selected because human-rights documents contain important legal terminology.
+
+A query such as:
+
+```text
+legal assistance for women prisoners
+```
+
+benefits from both:
+
+* Semantic understanding
+* Exact keyword matching
+
+Combining both approaches can improve retrieval quality for domain-specific questions.
+
+---
+
+## Limitations
+
+The application has several limitations:
+
+* Retrieval quality depends on the quality of the indexed documents.
+* The evaluation dataset is relatively small.
+* Retrieval scores from different retrieval algorithms are not directly comparable as absolute probabilities.
+* LLM-generated answers can still vary slightly between runs.
+* The application currently focuses on the indexed United Nations human-rights documents.
+* The FAISS index must be rebuilt when the source documents change.
+
+---
+
+## Future Improvements
+
+Possible future improvements include:
+
+* Cross-encoder re-ranking
+* Multi-query retrieval
+* Contextual compression
+* Better retrieval evaluation metrics
+* Larger evaluation datasets
+* Persistent conversation storage
+* User authentication
+* Conversation history management
+* Streaming LLM responses
+* Citation-level answer attribution
+* Deployment using Docker
+
+---
+
+## Assignment Requirements
+
+### Conversational Memory
+
+* [x] Remember previous messages
+* [x] Support multi-turn conversations
+* [x] Answer follow-up questions using previous context
+* [x] Maintain coherent conversations without requiring repetition
+
+### Improved Retrieval
+
+* [x] Baseline Similarity Search
+* [x] MMR
+* [x] Hybrid Search
+* [x] Compare retrieval methods
+* [x] Evaluate retrieval performance
+
+### Submission
+
+* [x] GitHub repository
+* [x] Source code
+* [x] Evaluation script
+* [x] Retrieval comparison
+* [x] Documentation
