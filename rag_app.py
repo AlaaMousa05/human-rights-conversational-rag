@@ -43,10 +43,10 @@ def load_index():
 
 @st.cache_resource
 def load_llm():
-    return ChatGroq(
-        model="llama-3.3-70b-versatile",
-        temperature=0
-    )
+   return ChatGroq(
+    model="openai/gpt-oss-120b",
+    temperature=0
+)
 
 
 # Build Keyword Search Index
