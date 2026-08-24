@@ -287,7 +287,7 @@ The application follows a typical RAG architecture:
                           ▼
                  ┌──────────────────┐
                  │   Groq LLM       │
-                 │ Llama 3.3 70B    │
+                 │  GPT-OSS 120B    │
                  └────────┬─────────┘
                           │
                           ▼
@@ -406,7 +406,7 @@ faiss_index/
 The application uses Groq as the LLM provider with:
 
 ```text
-Llama 3.3 70B Versatile
+OpenAI GPT-OSS 120B
 ```
 
 The model is instructed to answer using the retrieved document context and avoid inventing information that is not present in the provided documents.
@@ -444,7 +444,7 @@ The model is instructed to answer using the retrieved document context and avoid
 ### LLM
 
 * Groq
-* Llama 3.3 70B Versatile
+* OpenAI GPT-OSS 120B
 
 ### Web Scraping
 
@@ -520,13 +520,15 @@ pip install -r requirements.txt
 
 ## Environment Variables
 
-Create a `.env` file:
+For local development, create a `.env` file:
 
 ```env
 GROQ_API_KEY=your_groq_api_key
 ```
 
-Do not commit the `.env` file to GitHub.
+For Streamlit Cloud deployment, add `GROQ_API_KEY` to the application's Secrets instead of committing it to the repository.
+
+Do not commit API keys or `.env` files to GitHub.
 
 ---
 
